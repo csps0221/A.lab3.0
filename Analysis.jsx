@@ -19,63 +19,82 @@ export default function Analysis({ loading, error, record, onHome }) {
     return () => clearInterval(t);
   }, [loading]);
 
+  const pill = loading ? '分析中' : error ? '失敗' : record ? '已完成' : '待命';
+  const fb = record?.admin_feedback || {};
+
+  let body;
   if (loading) {
     const msg = STEPS.find(([v]) => p <= v)?.[1] || STEPS[4][1];
-    return (
-      <div className="card center" style={{ padding: '30px 20px' }}>
-        <div style={{ fontSize: 18, fontWeight: 700 }}>已送出題目,分析題目中</div>
-        <div className="muted" style={{ margin: '10px 0 16px' }}>{msg}</div>
-        <progress max="100" value={p} style={{ width: '100%' }} />
-        <div className="muted">解題進度 {Math.round(p)}%</div>
+    body = (
+      <div className="inner center">
+        <div className="spinner" aria-hidden="true" />
+        <div style={{ fontSize: 20, fontWeight: 800, margin: '14px 0 16px' }}>已送出題目,分析題目中</div>
+        <div className="row between"><small>解題進度</small><small>{Math.round(p)}%</small></div>
+        <div className="bar"><i style={{ width: `${p}%` }} /></div>
+        <div className="muted" style={{ marginTop: 14, fontSize: 14 }}>{msg}<br />解題約需 10~30 秒,請先不要離開此頁面。</div>
       </div>
     );
-  }
-  if (error) {
-    return (
-      <div className="stack">
-        <div className="alert bad"><b>解題失敗</b><br />{error}</div>
-        <button onClick={onHome}>回到首頁重試</button>
-      </div>
-    );
-  }
-  if (!record) return <div className="alert">目前尚無最新的解題結果,請至「首頁」輸入或上傳題目。</div>;
+  } else if (error) {
+    body = <div className="alert bad"><b>解題失敗</b><br />{error}</div>;
+  } else if (!record) {
+    body = <div className="alert">目前尚無最新的解題結果,請至「首頁」輸入或上傳題目。</div>;
+  } else {
+    body = (
+      <>
+        <div className="muted">本題解說深度:{record.depth_mode} · {record.subject}</div>
+        <div className="answer">
+          <div className="eyebrow">CORRECT ANSWER</div>
+          <div className="row" style={{ marginTop: 6 }}>
+            <span className="check">✓</span><b className="ans">{record.ans}</b>
+            {fb.status === 'correct' && <span className="tag ok">管理員審核:正確</span>}
+            {fb.status === 'incorrect' && <span className="tag bad">管理員審核:需再加強</span>}
+          </div>
+          <div className="muted" style={{ marginTop: 6 }}>標準參考答案:{record.ref_answer}</div>
+        </div>
 
-  const fb = record.admin_feedback || {};
+        <div className="inner">
+          <div className="secthead"><span className="num">01</span><div><div className="eyebrow">CONCEPT ANALYSIS</div><b>觀念詳解</b></div></div>
+          <Md>{record.reasoning}</Md>
+        </div>
+
+        {record.options_analysis?.length > 0 && (
+          <div className="inner">
+            <div className="secthead"><span className="num">02</span><div><div className="eyebrow">OPTION ANALYSIS</div><b>選項解析</b></div></div>
+            <div className="stack">
+              {record.options_analysis.map((o, i) => (
+                <div key={i} className={`opt ${o.is_correct ? 'ok' : 'bad'}`}>
+                  <b>{o.is_correct ? '✔' : '✘'} {o.text || o.option}</b>
+                  <Md>{o.explanation}</Md>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {fb.comment && (
+          <div className="inner" style={{ borderColor: '#F59E0B' }}>
+            <b style={{ color: '#F59E0B' }}>管理員點評與觀念加強</b>
+            <div style={{ marginTop: 4, whiteSpace: 'pre-wrap' }}>{fb.comment}</div>
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="stack">
-      <h3>解題解析</h3>
-      <div className="card">
-        <div className="row between">
-          <b className="hl">[{record.subject}] 觀念拆解與解答 <small>({record.depth_mode})</small></b>
-          {fb.status === 'correct' && <span className="tag ok">管理員審核:正確</span>}
-          {fb.status === 'incorrect' && <span className="tag bad">管理員審核:需再加強</span>}
-        </div>
-        <div className="muted" style={{ margin: '6px 0' }}>
-          標準參考答案:<b>{record.ref_answer}</b> | AI 答案:<b className="hl">{record.ans}</b>
-        </div>
-        <b>觀念推導過程:</b>
-        <Md>{record.reasoning}</Md>
+      <div className="row results-head">
+        <button className="sec" disabled={loading} onClick={onHome}>← 返回解題首頁</button>
+        <div style={{ flex: 1, minWidth: 0 }}><div className="eyebrow">SOLVE RESULTS</div><div className="h2">解題結果</div></div>
+        <span className="pill">{pill}</span>
       </div>
-
-      {record.options_analysis?.length > 0 && (
-        <>
-          <h4>選項解析</h4>
-          {record.options_analysis.map((o, i) => (
-            <div key={i} className={`opt ${o.is_correct ? 'ok' : 'bad'}`}>
-              <b>{o.is_correct ? '✔' : '✘'} {o.text || o.option}</b>
-              <Md>{o.explanation}</Md>
-            </div>
-          ))}
-        </>
-      )}
-
-      {fb.comment && (
-        <div className="card" style={{ borderColor: '#F59E0B' }}>
-          <b style={{ color: '#F59E0B' }}>管理員點評與觀念加強:</b>
-          <div style={{ marginTop: 4, whiteSpace: 'pre-wrap' }}>{fb.comment}</div>
+      <div className="card stack">
+        <div className="row">
+          <span className="step lg">3</span>
+          <div><b style={{ fontSize: 17 }}>解題解析</b><div className="muted">答案 → 觀念詳解 → 選項解析 → 追問</div></div>
         </div>
-      )}
-      <button onClick={onHome}>回到解題主頁</button>
+        {body}
+      </div>
     </div>
   );
 }
