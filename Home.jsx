@@ -14,6 +14,7 @@ export default function Home({ subjects, remains, locked, onSolve }) {
   const [text, setText] = useState('');
   const [files, setFiles] = useState([]);
   const [crops, setCrops] = useState({});
+  const [editing, setEditing] = useState({});
   const [depth, setDepth] = useState('標準詳解');
   const [subject, setSubject] = useState('');
   const [ref, setRef] = useState('');
@@ -32,13 +33,13 @@ export default function Home({ subjects, remains, locked, onSolve }) {
     setFiles((p) => p.filter((f) => f.id !== id));
     setCrops((p) => { const n = { ...p }; delete n[id]; return n; });
   }
-  function clearAll() { setText(''); setFiles([]); setCrops({}); setRef(''); setWarn(''); }
+  function clearAll() { setText(''); setFiles([]); setCrops({}); setEditing({}); setRef(''); setWarn(''); }
 
   function submit() {
     setWarn('');
     if (remains !== '無限' && remains <= 0) return setWarn('今日解題額度已用完,請明日再試!');
     const images = files.map((f) => crops[f.id]).filter(Boolean);
-    if (!text.trim() && !images.length) return setWarn('請輸入文字題目或上傳題目圖片!');
+    if (!text.trim() && !images.length) return setWarn('請上傳題目圖片,或在「補充敘述」輸入題目文字!');
     onSolve({ text, images, subject: subject || subjects[0], depth, refAnswer: ref });
   }
 
@@ -49,60 +50,89 @@ export default function Home({ subjects, remains, locked, onSolve }) {
     } catch (e) { setBugMsg(e.message); }
   }
 
+  const full = files.length >= 5;
   return (
     <div className="stack">
-      <div className="stephead"><span className="step">1</span>輸入文字題目或上傳圖片</div>
-      <label>文字題目描述(可直接貼上題目文字、觀念問題)
-        <textarea rows={5} value={text} disabled={locked} onChange={(e) => setText(e.target.value)}
-          placeholder="例如:請幫我解釋氧化還原反應中,氧化劑與還原劑的判斷方式..." />
-      </label>
-      <label>上傳題目圖片(選填,最多 5 張)
-        <input type="file" accept="image/png,image/jpeg" multiple disabled={locked || files.length >= 5} onChange={addFiles} />
-      </label>
-
-      {files.length > 0 && <h4>圖片裁切預覽(拖曳選取要解的範圍)</h4>}
-      {files.map((f, i) => (
-        <div key={f.id} className="card">
-          <div className="row between"><b>圖片 {i + 1}</b><button type="button" className="sec small" onClick={() => removeFile(f.id)}>移除</button></div>
-          <Cropper src={f.url} onChange={(b64) => setCrops((p) => ({ ...p, [f.id]: b64 }))} />
+      {/* 1 上傳題目圖片 */}
+      <div className="card stack">
+        <div className="row between">
+          <div className="stephead" style={{ margin: 0 }}><span className="step">1</span>上傳題目圖片</div>
+          {files.length > 0 && !full && (
+            <label className="pillbtn">＋ 繼續加入圖片
+              <input type="file" accept="image/png,image/jpeg" multiple hidden disabled={locked} onChange={addFiles} />
+            </label>
+          )}
         </div>
-      ))}
 
-      <div className="stephead"><span className="step">2</span>設定解說深度與科目資訊</div>
-      <div className="field-label">科目</div>
-      <div className="chips">
-        {subjects.map((sub, i) => (
-          <button
-            key={sub}
-            type="button"
-            className={`chip ${(subject || subjects[0]) === sub ? 'on' : ''}`}
-            style={{ '--c': DOT_COLORS[i % DOT_COLORS.length] }}
-            disabled={locked}
-            onClick={() => setSubject(sub)}
-          >
-            <span className="dot" />{sub}
-          </button>
+        {files.length === 0 && (
+          <label className="drop">
+            <input type="file" accept="image/png,image/jpeg" multiple hidden disabled={locked} onChange={addFiles} />
+            <span className="plus">＋</span>
+            <b>選擇題目圖片</b>
+            <small className="muted">可上傳 1~5 張,題目與解答皆可上傳</small>
+          </label>
+        )}
+
+        {files.map((f, i) => (
+          <div key={f.id} className="imgitem">
+            <div className="row">
+              <img className="thumb" src={f.url} alt="" />
+              <div style={{ flex: 1 }}>
+                <b>圖片 {i + 1}</b>
+                <div className="muted">{i === 0 ? '主要題目圖片' : '補充圖片'}</div>
+              </div>
+              <button type="button" className="sec small" disabled={locked} onClick={() => setEditing((p) => ({ ...p, [f.id]: !p[f.id] }))}>
+                {editing[f.id] ? '完成' : '編輯'}
+              </button>
+              <button type="button" className="danger small" disabled={locked} onClick={() => removeFile(f.id)}>刪除</button>
+            </div>
+            {/* 常駐掛載(僅隱藏),確保裁切結果一定會被取得 */}
+            <div hidden={!editing[f.id]} style={{ marginTop: 10 }}>
+              <div className="muted" style={{ marginBottom: 6 }}>拖曳選取要解的範圍</div>
+              <Cropper src={f.url} onChange={(b64) => setCrops((p) => ({ ...p, [f.id]: b64 }))} />
+            </div>
+          </div>
         ))}
       </div>
 
-      <div className="field-label">解說深度</div>
-      <div className="depths">
-        {DEPTHS.map(([k]) => (
-          <button key={k} type="button" className={`depth ${depth === k ? 'on' : ''}`} disabled={locked} onClick={() => setDepth(k)}>
-            {depth === k && <span aria-hidden="true">✓ </span>}{k}
-          </button>
-        ))}
-      </div>
-      <div className="muted" style={{ fontSize: 14 }}>{DEPTHS.find(([k]) => k === depth)[1]}</div>
+      {/* 2 設定題目資訊 */}
+      <div className="card stack">
+        <div className="stephead" style={{ margin: 0 }}><span className="step">2</span>設定題目資訊</div>
 
-      <label>標準參考答案(選填)
-        <input value={ref} disabled={locked} onChange={(e) => setRef(e.target.value)} placeholder="例如 B、ACD、2.5 mol..." />
-      </label>
+        <div className="field-label">科目</div>
+        <div className="chips">
+          {subjects.map((sub, i) => (
+            <button key={sub} type="button" className={`chip ${(subject || subjects[0]) === sub ? 'on' : ''}`}
+              style={{ '--c': DOT_COLORS[i % DOT_COLORS.length] }} disabled={locked} onClick={() => setSubject(sub)}>
+              <span className="dot" />{sub}
+            </button>
+          ))}
+        </div>
 
-      {warn && <div className="alert bad">{warn}</div>}
-      <div className="row">
-        <button style={{ flex: 3 }} disabled={locked} onClick={submit}>開始解題</button>
-        <button className="sec" style={{ flex: 1 }} disabled={locked} onClick={clearAll}>清除</button>
+        <label><span className="field-label">標準參考答案 <small className="opt-tag">選填</small></span>
+          <input value={ref} disabled={locked} onChange={(e) => setRef(e.target.value)} placeholder="例如 B、ACD、2.5 mol..." />
+        </label>
+
+        <label><span className="field-label">補充敘述 <small className="opt-tag">選填</small></span>
+          <textarea rows={3} value={text} disabled={locked} onChange={(e) => setText(e.target.value)}
+            placeholder="有需要再補充,例如:想特別問 C 選項(沒有圖片時,也可直接在這裡輸入題目)" />
+        </label>
+
+        <div className="field-label">解說深度</div>
+        <div className="depths">
+          {DEPTHS.map(([k]) => (
+            <button key={k} type="button" className={`depth ${depth === k ? 'on' : ''}`} disabled={locked} onClick={() => setDepth(k)}>
+              {depth === k && <span aria-hidden="true">✓ </span>}{k}
+            </button>
+          ))}
+        </div>
+        <div className="muted" style={{ fontSize: 14 }}>{DEPTHS.find(([k]) => k === depth)[1]}</div>
+
+        {warn && <div className="alert bad">{warn}</div>}
+        <div className="row">
+          <button className="bigbtn" style={{ flex: 3 }} disabled={locked} onClick={submit}>開始解題</button>
+          <button className="sec" style={{ flex: 1.2 }} disabled={locked} onClick={clearAll}>清除目前題目</button>
+        </div>
       </div>
 
       <details className="card">
