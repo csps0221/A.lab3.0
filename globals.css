@@ -69,3 +69,14 @@ th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border
 .md code { background:rgba(255,255,255,.1); padding:1px 5px; border-radius:4px; }
 .ReactCrop { max-width:100%; }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+/* ===== 科目晶片與解說深度(依參考圖樣式) ===== */
+.field-label { font-size:14px; font-weight:700; color:#CBD5E1; margin-top:4px; }
+.chips { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+@media (max-width:420px) { .chips { gap:8px; } }
+button.chip { --c:#34D399; display:flex; align-items:center; justify-content:center; gap:8px; padding:16px 6px; font-size:16px; font-weight:700; border-radius:16px; color:var(--c); background:color-mix(in srgb, var(--c) 16%, #1E293B); border:2px solid transparent; }
+button.chip .dot { width:12px; height:12px; border-radius:50%; background:var(--c); flex:none; }
+button.chip.on { border-color:var(--c); box-shadow:0 0 14px color-mix(in srgb, var(--c) 45%, transparent); }
+.depths { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+button.depth { background:rgba(2,6,23,.6); color:#CBD5E1; border:1.5px solid rgba(148,163,184,.25); border-radius:16px; padding:18px 6px; font-size:16px; font-weight:700; }
+button.depth.on { color:#fff; border-color:#E5484D; background:rgba(229,72,77,.12); }
