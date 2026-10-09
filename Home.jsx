@@ -4,10 +4,11 @@ import Cropper from './Cropper';
 import { api } from '@/lib/client';
 
 const DEPTHS = [
-  ['精簡解答', '掌握核心觀念與簡潔步驟'],
-  ['標準詳解', '完整步驟與觀念推導'],
-  ['深度解析', '包含引申觀念與易錯點剖析'],
+  ['精簡解答', '直接給答案與關鍵重點,快速核對。'],
+  ['標準詳解', '用少量步驟說清楚主要解法。'],
+  ['深度解析', '完整推導,並補充易錯點與延伸觀念。'],
 ];
+const DOT_COLORS = ['#34D399', '#60A5FA', '#F5B93B', '#F87171', '#A78BFA', '#2DD4BF', '#FB923C', '#F472B6'];
 
 export default function Home({ subjects, remains, locked, onSolve }) {
   const [text, setText] = useState('');
@@ -68,18 +69,32 @@ export default function Home({ subjects, remains, locked, onSolve }) {
       ))}
 
       <div className="stephead"><span className="step">2</span>設定解說深度與科目資訊</div>
-      <div className="grid3">
-        {DEPTHS.map(([k]) => (
-          <button key={k} type="button" className={depth === k ? '' : 'sec'} disabled={locked} onClick={() => setDepth(k)}>{k}</button>
+      <div className="field-label">科目</div>
+      <div className="chips">
+        {subjects.map((sub, i) => (
+          <button
+            key={sub}
+            type="button"
+            className={`chip ${(subject || subjects[0]) === sub ? 'on' : ''}`}
+            style={{ '--c': DOT_COLORS[i % DOT_COLORS.length] }}
+            disabled={locked}
+            onClick={() => setSubject(sub)}
+          >
+            <span className="dot" />{sub}
+          </button>
         ))}
       </div>
-      <div className="muted">目前選擇:{DEPTHS.find(([k]) => k === depth)[1]}</div>
 
-      <label>選擇題目科目
-        <select value={subject || subjects[0] || ''} disabled={locked} onChange={(e) => setSubject(e.target.value)}>
-          {subjects.map((s) => <option key={s}>{s}</option>)}
-        </select>
-      </label>
+      <div className="field-label">解說深度</div>
+      <div className="depths">
+        {DEPTHS.map(([k]) => (
+          <button key={k} type="button" className={`depth ${depth === k ? 'on' : ''}`} disabled={locked} onClick={() => setDepth(k)}>
+            {depth === k && <span aria-hidden="true">✓ </span>}{k}
+          </button>
+        ))}
+      </div>
+      <div className="muted" style={{ fontSize: 14 }}>{DEPTHS.find(([k]) => k === depth)[1]}</div>
+
       <label>標準參考答案(選填)
         <input value={ref} disabled={locked} onChange={(e) => setRef(e.target.value)} placeholder="例如 B、ACD、2.5 mol..." />
       </label>
